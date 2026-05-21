@@ -19,11 +19,13 @@ from typing import Any
 import torch
 
 from lerobot.processor import (
+    AbsoluteActionsProcessorStep,
     AddBatchDimensionProcessorStep,
     DeviceProcessorStep,
     NormalizerProcessorStep,
     PolicyAction,
     PolicyProcessorPipeline,
+    RelativeActionsProcessorStep,
     RenameObservationsProcessorStep,
     TokenizerProcessorStep,
     UnnormalizerProcessorStep,
@@ -66,6 +68,13 @@ def make_multi_task_dit_pre_post_processors(
         A tuple containing the configured pre-processor and post-processor pipelines.
     """
 
+    relative_step = RelativeActionsProcessorStep(
+        enabled=config.use_relative_actions,
+        exclude_joints=getattr(config, "relative_exclude_joints", []),
+        action_names=getattr(config, "action_feature_names", None),
+    )
+
+    # OpenPI order: raw → relative → normalize → model → unnormalize → absolute
     input_steps = [
         RenameObservationsProcessorStep(rename_map={}),
         AddBatchDimensionProcessorStep(),
@@ -77,6 +86,7 @@ def make_multi_task_dit_pre_post_processors(
             truncation=config.tokenizer_truncation,
         ),
         DeviceProcessorStep(device=config.device),
+        relative_step,
         NormalizerProcessorStep(
             features={**config.input_features, **config.output_features},
             norm_map=config.normalization_mapping,
@@ -90,6 +100,7 @@ def make_multi_task_dit_pre_post_processors(
             norm_map=config.normalization_mapping,
             stats=dataset_stats,
         ),
+        AbsoluteActionsProcessorStep(enabled=config.use_relative_actions, relative_step=relative_step),
         DeviceProcessorStep(device="cpu"),
     ]
 
