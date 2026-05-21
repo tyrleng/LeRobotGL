@@ -24,8 +24,6 @@ Covers:
     unnormalization, paired to the relative step) when ``use_relative_actions=True``.
 """
 
-import os
-
 import numpy as np
 import pytest
 import torch
@@ -40,11 +38,6 @@ from lerobot.processor.relative_action_processor import (
 from lerobot.utils.constants import ACTION, OBS_STATE
 
 ACTION_DIM = 6
-
-_CI_SKIP = pytest.mark.skipif(
-    os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true",
-    reason="DiT processor builds a CLIP tokenizer (requires transformers + network); not for CI",
-)
 
 
 def _identity_stats(dim=ACTION_DIM):
@@ -159,12 +152,19 @@ def test_act_factory_disabled_is_noop():
     torch.testing.assert_close(out[TransitionKey.ACTION], actions)
 
 
-# --- DiT processor wiring (CLIP tokenizer -> needs transformers, skipped on CI) ---
+# --- DiT processor wiring (needs transformers; CLIP tokenizer stubbed so it stays offline) ---
 
 
-@_CI_SKIP
-def test_dit_config_and_factory_wire_relative_absolute_steps():
+def test_dit_config_and_factory_wire_relative_absolute_steps(monkeypatch):
     pytest.importorskip("transformers")
+    from unittest.mock import MagicMock
+
+    import lerobot.processor.tokenizer_processor as tokenizer_processor
+
+    # The CLIP tokenizer is irrelevant to relative actions; stub the loader so the
+    # factory builds without hitting the HF hub.
+    monkeypatch.setattr(tokenizer_processor, "AutoTokenizer", MagicMock())
+
     from lerobot.policies.multi_task_dit.configuration_multi_task_dit import MultiTaskDiTConfig
     from lerobot.policies.multi_task_dit.processor_multi_task_dit import (
         make_multi_task_dit_pre_post_processors,
