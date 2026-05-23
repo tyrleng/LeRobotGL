@@ -92,6 +92,13 @@ class MultiTaskDiTConfig(PreTrainedConfig):
         }
     )
 
+    # Relative actions: converts absolute actions to relative (relative to state).
+    use_relative_actions: bool = False
+    # Joint names to exclude from relative (kept absolute). Empty list = all dims relative.
+    relative_exclude_joints: list[str] = field(default_factory=lambda: ["gripper"])
+    # Populated at runtime from dataset metadata by make_policy.
+    action_feature_names: list[str] | None = None
+
     # Training/Optimizer
     optimizer_lr: float = 2e-5
     optimizer_betas: tuple = (0.95, 0.999)

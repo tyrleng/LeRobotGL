@@ -126,6 +126,12 @@ class RelativeActionsProcessorStep(ProcessorStep):
         observation = transition.get(TransitionKey.OBSERVATION, {})
         state = observation.get(OBS_STATE) if observation else None
 
+        # Multi-obs-step policies (e.g. DiT) pass state as (B, n_obs_steps, state_dim);
+        # use the most recent step (chronological order, so -1 is the current frame) as
+        # the relative reference. No-op for single-step (B, state_dim) policies.
+        if state is not None and state.ndim == 3:
+            state = state[:, -1]
+
         # Always cache state for the paired AbsoluteActionsProcessorStep
         if state is not None:
             self._last_state = state
