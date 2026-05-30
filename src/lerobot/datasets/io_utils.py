@@ -182,6 +182,8 @@ def write_tasks(tasks: pandas.DataFrame, local_dir: Path) -> None:
 
 def load_tasks(local_dir: Path) -> pandas.DataFrame:
     tasks = pd.read_parquet(local_dir / DEFAULT_TASKS_PATH)
+    if "task" in tasks.columns:
+        tasks = tasks.set_index("task")
     tasks.index.name = "task"
     return tasks
 
